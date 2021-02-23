@@ -98,23 +98,25 @@ const Pagination = (props) => {
             <ArrowRightIcon />
           </Center>
         )}
-        <Center
-          onClick={() => {
-            router.push(
-              `/?p=${pages}${position ? `&position=${position}` : ""}${
-                department ? `&department=${department}` : ""
-              }`
-            );
-          }}
-          cursor="pointer"
-          w="2.2rem"
-          h="2.2rem"
-          borderRadius="0.5rem"
-          _hover={{ border: "1px solid #909193" }}
-          m="0 0.2rem"
-        >
-          {pages}
-        </Center>
+        {pages !== 1 && (
+          <Center
+            onClick={() => {
+              router.push(
+                `/?p=${pages}${position ? `&position=${position}` : ""}${
+                  department ? `&department=${department}` : ""
+                }`
+              );
+            }}
+            cursor="pointer"
+            w="2.2rem"
+            h="2.2rem"
+            borderRadius="0.5rem"
+            _hover={{ border: "1px solid #909193" }}
+            m="0 0.2rem"
+          >
+            {pages}
+          </Center>
+        )}
       </Flex>
     </Center>
   );
