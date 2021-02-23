@@ -98,7 +98,7 @@ const Pagination = (props) => {
             <ArrowRightIcon />
           </Center>
         )}
-        {pages !== 1 && (
+        {pages !== 1 ? (
           <Center
             onClick={() => {
               router.push(
@@ -116,6 +116,8 @@ const Pagination = (props) => {
           >
             {pages}
           </Center>
+        ) : (
+          ""
         )}
       </Flex>
     </Center>

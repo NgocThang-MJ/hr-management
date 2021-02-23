@@ -40,13 +40,23 @@ export default function Home({ staffs, departments, positions }) {
     });
   }
   if (department) {
+    const department_id = departments.find(
+      (item) =>
+        item.department.toLowerCase().replaceAll(" ", "") ===
+        department.toLowerCase().replaceAll(" ", "")
+    )._id;
     filteredStaffs = filteredStaffs.filter((staff) => {
-      return staff.department.toLowerCase().replaceAll(" ", "") === department;
+      return staff.department_id === department_id;
     });
   }
   if (position) {
+    const position_id = positions.find(
+      (item) =>
+        item.position.toLowerCase().replaceAll(" ", "") ===
+        position.toLowerCase().replaceAll(" ", "")
+    )._id;
     filteredStaffs = filteredStaffs.filter((staff) => {
-      return staff.position.toLowerCase().replaceAll(" ", "") === position;
+      return staff.position_id === position_id;
     });
   }
   const displayStaffs = filteredStaffs.slice((p - 1) * perPage, p * perPage);
@@ -68,19 +78,19 @@ export default function Home({ staffs, departments, positions }) {
             Department
           </MenuButton>
           <MenuList>
-            <MenuItem onClick={() => router.push(`/?p=${p}`)}>All</MenuItem>
-            {departments.map((department) => (
+            <MenuItem onClick={() => router.push("/")}>All</MenuItem>
+            {departments.map((item) => (
               <MenuItem
-                key={department}
+                key={item._id}
                 onClick={() =>
                   router.push(
-                    `/?p=1&department=${department
+                    `/?p=1&department=${item.department
                       .toLowerCase()
                       .replaceAll(" ", "")}`
                   )
                 }
               >
-                {department}
+                {item.department}
               </MenuItem>
             ))}
           </MenuList>
@@ -96,19 +106,19 @@ export default function Home({ staffs, departments, positions }) {
             Position
           </MenuButton>
           <MenuList>
-            <MenuItem onClick={() => router.push(`/?p=${p}`)}>All</MenuItem>
-            {positions.slice(30, 44).map((position) => (
+            <MenuItem onClick={() => router.push("/")}>All</MenuItem>
+            {positions.map((item) => (
               <MenuItem
-                key={position}
+                key={item._id}
                 onClick={() =>
                   router.push(
-                    `/?p=1&position=${position
+                    `/?p=1&position=${item.position
                       .toLowerCase()
                       .replaceAll(" ", "")}`
                   )
                 }
               >
-                {position}
+                {item.position}
               </MenuItem>
             ))}
           </MenuList>
@@ -137,8 +147,18 @@ export default function Home({ staffs, departments, positions }) {
               <Td>{staff.full_name}</Td>
               <Td>{staff.birth_day}</Td>
               <Td>{staff.gender}</Td>
-              <Td>{staff.position}</Td>
-              <Td>{staff.department}</Td>
+              <Td>
+                {
+                  positions.find((item) => item._id === staff.position_id)
+                    .position
+                }
+              </Td>
+              <Td>
+                {
+                  departments.find((item) => item._id === staff.department_id)
+                    .department
+                }
+              </Td>
               <Td>{staff.phone_number}</Td>
               <Td>{staff.address}</Td>
               <Td>{staff.province}</Td>
@@ -160,15 +180,14 @@ export default function Home({ staffs, departments, positions }) {
 
 export async function getStaticProps() {
   const { db } = await connectToDatabase();
-  // const total = await db.collection("staff_info").countDocuments();
   const staffs = await db.collection("staff_info").find({}).toArray();
-  const departments = await db.collection("staff_info").distinct("department");
-  const positions = await db.collection("staff_info").distinct("position");
+  const departments = await db.collection("department").find({}).toArray();
+  const positions = await db.collection("position").find({}).toArray();
   return {
     props: {
       staffs: JSON.parse(JSON.stringify(staffs)),
-      departments,
-      positions,
+      departments: JSON.parse(JSON.stringify(departments)),
+      positions: JSON.parse(JSON.stringify(positions)),
     },
   };
 }
