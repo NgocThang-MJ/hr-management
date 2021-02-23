@@ -149,7 +149,7 @@ export default function Home({ staffs, departments, positions }) {
 
       <Pagination
         p={p}
-        total={staffs.length}
+        total={filteredStaffs.length}
         perPage={perPage}
         department={department}
         position={position}
