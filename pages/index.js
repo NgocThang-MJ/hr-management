@@ -1,233 +1,174 @@
-import Head from 'next/head'
-import { connectToDatabase } from '../util/mongodb'
+import Head from "next/head";
+import { useRouter } from "next/router";
+import { useSelector } from "react-redux";
 
-export default function Home({ isConnected }) {
+import { connectToDatabase } from "../util/mongodb";
+import Pagination from "../comps/Pagination";
+
+import {
+  Box,
+  Text,
+  Flex,
+  Spacer,
+  TableCaption,
+  Table,
+  Thead,
+  Tr,
+  Th,
+  Td,
+  Tbody,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  Button,
+} from "@chakra-ui/react";
+import { ChevronDownIcon } from "@chakra-ui/icons";
+
+export default function Home({ staffs, departments, positions }) {
+  const { search } = useSelector((state) => state.search);
+  const router = useRouter();
+  const p = router.query.p || 1;
+  const { department, position } = router.query;
+  let numberOrder = (p - 1) * 15 + 1;
+  const perPage = 15;
+
+  let filteredStaffs = staffs;
+  if (search) {
+    filteredStaffs = filteredStaffs.filter((staff) => {
+      return staff.full_name.toLowerCase().indexOf(search.toLowerCase()) > -1;
+    });
+  }
+  if (department) {
+    filteredStaffs = filteredStaffs.filter((staff) => {
+      return staff.department.toLowerCase().replaceAll(" ", "") === department;
+    });
+  }
+  if (position) {
+    filteredStaffs = filteredStaffs.filter((staff) => {
+      return staff.position.toLowerCase().replaceAll(" ", "") === position;
+    });
+  }
+  const displayStaffs = filteredStaffs.slice((p - 1) * perPage, p * perPage);
+
   return (
-    <div className="container">
+    <Box p="1rem">
       <Head>
-        <title>Create Next App</title>
+        <title>HR Management</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
-      <main>
-        <h1 className="title">
-          Welcome to <a href="https://nextjs.org">Next.js with MongoDB!</a>
-        </h1>
-
-        {isConnected ? (
-          <h2 className="subtitle">You are connected to MongoDB</h2>
-        ) : (
-          <h2 className="subtitle">
-            You are NOT connected to MongoDB. Check the <code>README.md</code>{' '}
-            for instructions.
-          </h2>
-        )}
-
-        <p className="description">
-          Get started by editing <code>pages/index.js</code>
-        </p>
-
-        <div className="grid">
-          <a href="https://nextjs.org/docs" className="card">
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className="card">
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className="card"
+      <Flex>
+        <Text fontSize="2rem" fontWeight="bold">
+          Staff
+        </Text>
+        <Spacer />
+        {/* Filter Department */}
+        <Menu>
+          <MenuButton h="2.2rem" as={Button} rightIcon={<ChevronDownIcon />}>
+            Department
+          </MenuButton>
+          <MenuList>
+            <MenuItem onClick={() => router.push(`/?p=${p}`)}>All</MenuItem>
+            {departments.map((department) => (
+              <MenuItem
+                key={department}
+                onClick={() =>
+                  router.push(
+                    `/?p=1&department=${department
+                      .toLowerCase()
+                      .replaceAll(" ", "")}`
+                  )
+                }
+              >
+                {department}
+              </MenuItem>
+            ))}
+          </MenuList>
+        </Menu>
+        {/* Filter Position */}
+        <Menu>
+          <MenuButton
+            h="2.2rem"
+            as={Button}
+            margin="0 2rem"
+            rightIcon={<ChevronDownIcon />}
           >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
+            Position
+          </MenuButton>
+          <MenuList>
+            <MenuItem onClick={() => router.push(`/?p=${p}`)}>All</MenuItem>
+            {positions.slice(30, 44).map((position) => (
+              <MenuItem
+                key={position}
+                onClick={() =>
+                  router.push(
+                    `/?p=1&position=${position
+                      .toLowerCase()
+                      .replaceAll(" ", "")}`
+                  )
+                }
+              >
+                {position}
+              </MenuItem>
+            ))}
+          </MenuList>
+        </Menu>
+      </Flex>
 
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className="card"
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
-      </main>
+      <Table variant="simple" size="sm">
+        <TableCaption>Staff</TableCaption>
+        <Thead>
+          <Tr>
+            <Th>No.</Th>
+            <Th>Full name</Th>
+            <Th>Birth day</Th>
+            <Th>Gender</Th>
+            <Th>Position</Th>
+            <Th>Department</Th>
+            <Th>Phone number</Th>
+            <Th>Address</Th>
+            <Th>City</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {displayStaffs.map((staff) => (
+            <Tr key={staff._id}>
+              <Td>{numberOrder++}</Td>
+              <Td>{staff.full_name}</Td>
+              <Td>{staff.birth_day}</Td>
+              <Td>{staff.gender}</Td>
+              <Td>{staff.position}</Td>
+              <Td>{staff.department}</Td>
+              <Td>{staff.phone_number}</Td>
+              <Td>{staff.address}</Td>
+              <Td>{staff.province}</Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
 
-      <footer>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className="logo" />
-        </a>
-      </footer>
-
-      <style jsx>{`
-        .container {
-          min-height: 100vh;
-          padding: 0 0.5rem;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
-
-        main {
-          padding: 5rem 0;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
-
-        footer {
-          width: 100%;
-          height: 100px;
-          border-top: 1px solid #eaeaea;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-
-        footer img {
-          margin-left: 0.5rem;
-        }
-
-        footer a {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-
-        a {
-          color: inherit;
-          text-decoration: none;
-        }
-
-        .title a {
-          color: #0070f3;
-          text-decoration: none;
-        }
-
-        .title a:hover,
-        .title a:focus,
-        .title a:active {
-          text-decoration: underline;
-        }
-
-        .title {
-          margin: 0;
-          line-height: 1.15;
-          font-size: 4rem;
-        }
-
-        .title,
-        .description {
-          text-align: center;
-        }
-
-        .subtitle {
-          font-size: 2rem;
-        }
-
-        .description {
-          line-height: 1.5;
-          font-size: 1.5rem;
-        }
-
-        code {
-          background: #fafafa;
-          border-radius: 5px;
-          padding: 0.75rem;
-          font-size: 1.1rem;
-          font-family: Menlo, Monaco, Lucida Console, Liberation Mono,
-            DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace;
-        }
-
-        .grid {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-wrap: wrap;
-
-          max-width: 800px;
-          margin-top: 3rem;
-        }
-
-        .card {
-          margin: 1rem;
-          flex-basis: 45%;
-          padding: 1.5rem;
-          text-align: left;
-          color: inherit;
-          text-decoration: none;
-          border: 1px solid #eaeaea;
-          border-radius: 10px;
-          transition: color 0.15s ease, border-color 0.15s ease;
-        }
-
-        .card:hover,
-        .card:focus,
-        .card:active {
-          color: #0070f3;
-          border-color: #0070f3;
-        }
-
-        .card h3 {
-          margin: 0 0 1rem 0;
-          font-size: 1.5rem;
-        }
-
-        .card p {
-          margin: 0;
-          font-size: 1.25rem;
-          line-height: 1.5;
-        }
-
-        .logo {
-          height: 1em;
-        }
-
-        @media (max-width: 600px) {
-          .grid {
-            width: 100%;
-            flex-direction: column;
-          }
-        }
-      `}</style>
-
-      <style jsx global>{`
-        html,
-        body {
-          padding: 0;
-          margin: 0;
-          font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
-            Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue,
-            sans-serif;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-      `}</style>
-    </div>
-  )
+      <Pagination
+        p={p}
+        total={staffs.length}
+        perPage={perPage}
+        department={department}
+        position={position}
+      />
+    </Box>
+  );
 }
 
-export async function getServerSideProps(context) {
-  const { client } = await connectToDatabase()
-
-  const isConnected = await client.isConnected()
-
+export async function getStaticProps() {
+  const { db } = await connectToDatabase();
+  // const total = await db.collection("staff_info").countDocuments();
+  const staffs = await db.collection("staff_info").find({}).toArray();
+  const departments = await db.collection("staff_info").distinct("department");
+  const positions = await db.collection("staff_info").distinct("position");
   return {
-    props: { isConnected },
-  }
+    props: {
+      staffs: JSON.parse(JSON.stringify(staffs)),
+      departments,
+      positions,
+    },
+  };
 }
