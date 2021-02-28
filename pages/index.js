@@ -1,6 +1,8 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
+import axios from "axios";
+import { useState, useEffect } from "react";
 
 import { connectToDatabase } from "../util/mongodb";
 import Pagination from "../comps/Pagination";
@@ -10,13 +12,6 @@ import {
   Text,
   Flex,
   Spacer,
-  TableCaption,
-  Table,
-  Thead,
-  Tr,
-  Th,
-  Td,
-  Tbody,
   Menu,
   MenuButton,
   MenuList,
@@ -24,42 +19,71 @@ import {
   Button,
 } from "@chakra-ui/react";
 import { ChevronDownIcon } from "@chakra-ui/icons";
+import NewStaffModal from "../comps/NewStaffModal";
+import TableStaffs from "../comps/TableStaffs";
 
 export default function Home({ staffs, departments, positions }) {
   const { search } = useSelector((state) => state.search);
   const router = useRouter();
   const p = router.query.p || 1;
   const { department, position } = router.query;
-  let numberOrder = (p - 1) * 15 + 1;
   const perPage = 15;
-
-  let filteredStaffs = staffs;
-  if (search) {
-    filteredStaffs = filteredStaffs.filter((staff) => {
-      return staff.full_name.toLowerCase().indexOf(search.toLowerCase()) > -1;
-    });
-  }
-  if (department) {
+  const [allStaffs, setAllStaffs] = useState(staffs);
+  const [filteredStaffs, setFilteredStaffs] = useState(allStaffs);
+  console.log(allStaffs);
+  const [searchedStaffs, setSearchedStaffs] = useState("");
+  const filterByDepartment = (department) => {
     const department_id = departments.find(
-      (item) =>
-        item.department.toLowerCase().replaceAll(" ", "") ===
-        department.toLowerCase().replaceAll(" ", "")
+      (item) => item.department.replaceAll(" ", "-") === department
     )._id;
-    filteredStaffs = filteredStaffs.filter((staff) => {
-      return staff.department_id === department_id;
-    });
-  }
-  if (position) {
+    setFilteredStaffs(
+      allStaffs.filter((staff) => {
+        return staff.department_id === department_id;
+      })
+    );
+  };
+  const filterByPosition = (position) => {
     const position_id = positions.find(
-      (item) =>
-        item.position.toLowerCase().replaceAll(" ", "") ===
-        position.toLowerCase().replaceAll(" ", "")
+      (item) => item.position.replaceAll(" ", "-") === position
     )._id;
-    filteredStaffs = filteredStaffs.filter((staff) => {
-      return staff.position_id === position_id;
-    });
-  }
-  const displayStaffs = filteredStaffs.slice((p - 1) * perPage, p * perPage);
+    setFilteredStaffs(
+      allStaffs.filter((staff) => {
+        return staff.position_id === position_id;
+      })
+    );
+  };
+  useEffect(() => {
+    console.log("run");
+    if (department) {
+      filterByDepartment(department);
+    } else if (position) {
+      filterByPosition(position);
+    } else {
+      setFilteredStaffs(allStaffs);
+    }
+  }, [department, position]);
+  useEffect(() => {
+    if (search) {
+      setSearchedStaffs(
+        filteredStaffs.filter(
+          (staff) =>
+            staff.full_name.toLowerCase().indexOf(search.toLowerCase()) > -1
+        )
+      );
+    } else {
+      setSearchedStaffs("");
+    }
+  }, [search]);
+
+  const deleteStaff = async (id) => {
+    const res = await axios.post("/api/staffs", { id });
+    setAllStaffs(allStaffs.filter((e) => e._id !== id));
+    setFilteredStaffs(filteredStaffs.filter((e) => e._id !== id));
+    console.log(res);
+  };
+  const displayStaffs = searchedStaffs
+    ? searchedStaffs.slice((p - 1) * perPage, p * perPage)
+    : filteredStaffs.slice((p - 1) * perPage, p * perPage);
 
   return (
     <Box p="1rem">
@@ -72,6 +96,8 @@ export default function Home({ staffs, departments, positions }) {
           Staff
         </Text>
         <Spacer />
+        {/* New Staff Modal */}
+        <NewStaffModal />
         {/* Filter Department */}
         <Menu>
           <MenuButton h="2.2rem" as={Button} rightIcon={<ChevronDownIcon />}>
@@ -84,9 +110,7 @@ export default function Home({ staffs, departments, positions }) {
                 key={item._id}
                 onClick={() =>
                   router.push(
-                    `/?p=1&department=${item.department
-                      .toLowerCase()
-                      .replaceAll(" ", "")}`
+                    `/?p=1&department=${item.department.replaceAll(" ", "-")}`
                   )
                 }
               >
@@ -100,7 +124,7 @@ export default function Home({ staffs, departments, positions }) {
           <MenuButton
             h="2.2rem"
             as={Button}
-            margin="0 2rem"
+            margin="0 1rem"
             rightIcon={<ChevronDownIcon />}
           >
             Position
@@ -112,9 +136,7 @@ export default function Home({ staffs, departments, positions }) {
                 key={item._id}
                 onClick={() =>
                   router.push(
-                    `/?p=1&position=${item.position
-                      .toLowerCase()
-                      .replaceAll(" ", "")}`
+                    `/?p=1&position=${item.position.replaceAll(" ", "-")}`
                   )
                 }
               >
@@ -125,51 +147,17 @@ export default function Home({ staffs, departments, positions }) {
         </Menu>
       </Flex>
 
-      <Table variant="simple" size="sm">
-        <TableCaption>Staff</TableCaption>
-        <Thead>
-          <Tr>
-            <Th>No.</Th>
-            <Th>Full name</Th>
-            <Th>Birth day</Th>
-            <Th>Gender</Th>
-            <Th>Position</Th>
-            <Th>Department</Th>
-            <Th>Phone number</Th>
-            <Th>Address</Th>
-            <Th>City</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {displayStaffs.map((staff) => (
-            <Tr key={staff._id}>
-              <Td>{numberOrder++}</Td>
-              <Td>{staff.full_name}</Td>
-              <Td>{staff.birth_day}</Td>
-              <Td>{staff.gender}</Td>
-              <Td>
-                {
-                  positions.find((item) => item._id === staff.position_id)
-                    .position
-                }
-              </Td>
-              <Td>
-                {
-                  departments.find((item) => item._id === staff.department_id)
-                    .department
-                }
-              </Td>
-              <Td>{staff.phone_number}</Td>
-              <Td>{staff.address}</Td>
-              <Td>{staff.province}</Td>
-            </Tr>
-          ))}
-        </Tbody>
-      </Table>
+      <TableStaffs
+        staffs={displayStaffs}
+        positions={positions}
+        departments={departments}
+        p={p}
+        deleteStaff={deleteStaff}
+      />
 
       <Pagination
         p={p}
-        total={filteredStaffs.length}
+        total={searchedStaffs.length || filteredStaffs.length}
         perPage={perPage}
         department={department}
         position={position}
@@ -189,5 +177,6 @@ export async function getStaticProps() {
       departments: JSON.parse(JSON.stringify(departments)),
       positions: JSON.parse(JSON.stringify(positions)),
     },
+    revalidate: 1,
   };
 }
