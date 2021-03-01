@@ -1,4 +1,4 @@
-import { connectToDatabase } from "../../util/mongodb";
+import { connectToDatabase } from "../../../util/mongodb";
 import { ObjectId } from "mongodb";
 
 export default async (req, res) => {
@@ -6,8 +6,8 @@ export default async (req, res) => {
     const { db } = await connectToDatabase();
     const { id } = req.body;
     await db.collection("staff_info").deleteOne({ _id: ObjectId(id) });
-    res.json({ msg: "Deleted Staff" });
+    res.status(200).json({ msg: "Deleted Staff" });
   } catch (e) {
-    console.log("error when delete staff", e);
+    res.status(400).json({ msg: "Error when delete staff, please try later" });
   }
 };

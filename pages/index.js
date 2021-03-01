@@ -1,7 +1,6 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
-import axios from "axios";
 import { useState, useEffect } from "react";
 
 import { connectToDatabase } from "../util/mongodb";
@@ -22,50 +21,17 @@ import { ChevronDownIcon } from "@chakra-ui/icons";
 import NewStaffModal from "../comps/NewStaffModal";
 import TableStaffs from "../comps/TableStaffs";
 
-export default function Home({ staffs, departments, positions }) {
+export default function Home({ staffs, departments, positions, total }) {
   const { search } = useSelector((state) => state.search);
   const router = useRouter();
-  const p = router.query.p || 1;
-  const { department, position } = router.query;
+  let { p, department, position } = router.query;
+  p = p || 1;
   const perPage = 15;
-  const [allStaffs, setAllStaffs] = useState(staffs);
-  const [filteredStaffs, setFilteredStaffs] = useState(allStaffs);
-  console.log(allStaffs);
   const [searchedStaffs, setSearchedStaffs] = useState("");
-  const filterByDepartment = (department) => {
-    const department_id = departments.find(
-      (item) => item.department.replaceAll(" ", "-") === department
-    )._id;
-    setFilteredStaffs(
-      allStaffs.filter((staff) => {
-        return staff.department_id === department_id;
-      })
-    );
-  };
-  const filterByPosition = (position) => {
-    const position_id = positions.find(
-      (item) => item.position.replaceAll(" ", "-") === position
-    )._id;
-    setFilteredStaffs(
-      allStaffs.filter((staff) => {
-        return staff.position_id === position_id;
-      })
-    );
-  };
-  useEffect(() => {
-    console.log("run");
-    if (department) {
-      filterByDepartment(department);
-    } else if (position) {
-      filterByPosition(position);
-    } else {
-      setFilteredStaffs(allStaffs);
-    }
-  }, [department, position]);
   useEffect(() => {
     if (search) {
       setSearchedStaffs(
-        filteredStaffs.filter(
+        staffs.filter(
           (staff) =>
             staff.full_name.toLowerCase().indexOf(search.toLowerCase()) > -1
         )
@@ -74,16 +40,6 @@ export default function Home({ staffs, departments, positions }) {
       setSearchedStaffs("");
     }
   }, [search]);
-
-  const deleteStaff = async (id) => {
-    const res = await axios.post("/api/staffs", { id });
-    setAllStaffs(allStaffs.filter((e) => e._id !== id));
-    setFilteredStaffs(filteredStaffs.filter((e) => e._id !== id));
-    console.log(res);
-  };
-  const displayStaffs = searchedStaffs
-    ? searchedStaffs.slice((p - 1) * perPage, p * perPage)
-    : filteredStaffs.slice((p - 1) * perPage, p * perPage);
 
   return (
     <Box p="1rem">
@@ -97,7 +53,7 @@ export default function Home({ staffs, departments, positions }) {
         </Text>
         <Spacer />
         {/* New Staff Modal */}
-        <NewStaffModal />
+        <NewStaffModal departments={departments} positions={positions} />
         {/* Filter Department */}
         <Menu>
           <MenuButton h="2.2rem" as={Button} rightIcon={<ChevronDownIcon />}>
@@ -148,16 +104,15 @@ export default function Home({ staffs, departments, positions }) {
       </Flex>
 
       <TableStaffs
-        staffs={displayStaffs}
+        staffs={searchedStaffs || staffs}
         positions={positions}
         departments={departments}
         p={p}
-        deleteStaff={deleteStaff}
       />
 
       <Pagination
         p={p}
-        total={searchedStaffs.length || filteredStaffs.length}
+        total={total}
         perPage={perPage}
         department={department}
         position={position}
@@ -166,9 +121,35 @@ export default function Home({ staffs, departments, positions }) {
   );
 }
 
-export async function getStaticProps() {
+export async function getServerSideProps(context) {
+  let { p, department, position } = context.query;
+  const limit = 15;
   const { db } = await connectToDatabase();
-  const staffs = await db.collection("staff_info").find({}).toArray();
+  let query = {};
+  if (department) {
+    department = department.split("-").join(" ");
+    let department_id = await db
+      .collection("department")
+      .findOne({ department });
+    department_id = department_id._id;
+    query = { department_id };
+  } else if (position) {
+    position = position.split("-").join(" ");
+    let position_id = await db.collection("position").findOne({ position });
+    position_id = position_id._id;
+    query = { position_id };
+  }
+  const staffs = await db
+    .collection("staff_info")
+    .aggregate([
+      {
+        $match: query,
+      },
+      { $skip: (parseInt(p) - 1 || 1) * limit },
+      { $limit: limit },
+    ])
+    .toArray();
+  const total = await db.collection("staff_info").find(query).count();
   const departments = await db.collection("department").find({}).toArray();
   const positions = await db.collection("position").find({}).toArray();
   return {
@@ -176,7 +157,7 @@ export async function getStaticProps() {
       staffs: JSON.parse(JSON.stringify(staffs)),
       departments: JSON.parse(JSON.stringify(departments)),
       positions: JSON.parse(JSON.stringify(positions)),
+      total,
     },
-    revalidate: 1,
   };
 }
