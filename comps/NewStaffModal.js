@@ -77,7 +77,7 @@ const NewStaffModal = ({ departments, positions }) => {
 
   return (
     <>
-      <Button onClick={onOpen} h="2.2rem" mr="1rem">
+      <Button onClick={onOpen} h="2.2rem" mr="1rem" colorScheme="teal">
         New Staff
       </Button>
 
